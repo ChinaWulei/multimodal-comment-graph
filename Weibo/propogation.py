@@ -156,14 +156,18 @@ class ObjectiveLoss_TextImage(nn.Module):
         root_feature, img  = batch_data.root_feature,batch_data.img
 
         root_length = len(root_feature)
-        root_img_mask = torch.ones(root_length, 1).to(img.device)
-        img_root_mask = torch.ones(root_length, 1).to(img.device)
+        root_img_mask = getattr(batch_data, "root_attention_mask", None)
+        if root_img_mask is None:
+            root_img_mask = torch.ones(
+                root_length, root_feature.shape[-2], device=img.device)
         root_feature = torch.squeeze(root_feature, dim=1) 
         root_feature = self.text_attention(root_feature,root_img_mask)
 
         img = F.relu(self.bn(self.conv(img)))  
         img = img.view(img.shape[0], img.shape[1], -1)  
         img = img.permute([0, 2, 1]) 
+        img_root_mask = torch.ones(
+            img.shape[0], img.shape[1], device=img.device)
         img = self.image_attention(img, img_root_mask)
         root_feature = torch.squeeze(root_feature,dim=1)
         img = torch.squeeze(img, dim=1)
@@ -245,7 +249,9 @@ class Text_Transformer(nn.Module):
         features = self.embedding(features)
         features = self.tf(features, features, features, mask) 
 
-        pooled = torch.mean(features, dim=1,keepdim=True)
+        mask = mask.to(features.dtype).unsqueeze(-1)
+        pooled = (features * mask).sum(dim=1, keepdim=True)
+        pooled = pooled / mask.sum(dim=1, keepdim=True).clamp_min(1.0)
         return pooled
     
 

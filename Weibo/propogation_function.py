@@ -8,8 +8,11 @@ def calculate_feature_weighted(x, node_centrality):
     x = copy.deepcopy(x)
     x = x.abs()
     w = x.t() @ node_centrality   
-    w = w.log() 
-    s = (w.max() - w) / (w.max() - w.mean())
+    w = w.clamp_min(1e-12).log()
+    denominator = w.max() - w.mean()
+    if denominator.abs() < 1e-12:
+        return torch.ones_like(w)
+    s = (w.max() - w) / denominator
 
     return s
 
@@ -27,16 +30,20 @@ def feature_mask(x, w, p: float = 0.5, threshold: float = 0.6):
 
 
 
-def cal_pagerank(edge_index, damp: float = 0.85, iter: int = 1000):
+def cal_pagerank(edge_index, num_nodes=None, damp: float = 0.85, iter: int = 1000):
     G = nx.Graph()
+    if num_nodes is not None:
+        G.add_nodes_from(range(num_nodes))
     edges = list(zip(edge_index[0], edge_index[1]))
     for edge in edges:
         G.add_edge(edge[0].item(), edge[1].item())
     try:
         pagerank_list = nx.pagerank(G, alpha=damp, max_iter=iter)
     except Exception:
-        print("do not converge in the default number of times")
-    pagerank_list = list(pagerank_list.values())
+        # A uniform fallback keeps augmentation usable for degenerate graphs.
+        node_count = max(G.number_of_nodes(), 1)
+        pagerank_list = {node: 1.0 / node_count for node in G.nodes}
+    pagerank_list = [pagerank_list[index] for index in sorted(pagerank_list)]
     x = torch.tensor(pagerank_list).to(edge_index.device).to(torch.float32)
     return x
 
@@ -128,7 +135,10 @@ def cal_edge_degree(edge_index):
 
 def get_augmented_by_node_mask(batch_data):
     batch_data= copy.copy(batch_data) 
-    page_rank_centrality = cal_pagerank(edge_index=batch_data.edge_index)
+    page_rank_centrality = cal_pagerank(
+        edge_index=batch_data.edge_index,
+        num_nodes=batch_data.x.size(0),
+    )
     feature_weighted = calculate_feature_weighted(batch_data.x, page_rank_centrality)
     batch_data.x = feature_mask(batch_data.x, feature_weighted)
     return batch_data
@@ -154,23 +164,10 @@ def get_augmented_by_node_mask_eignvector(batch_data):
 
 def get_augmented_by_drop_edge(batch_data):
     batch_data = copy.copy(batch_data)
+    if batch_data.edge_index.numel() == 0:
+        return batch_data
     edge_weighted = cal_edge_pagerank(batch_data.edge_index)
-    edge_index = drop_edge(batch_data.edge_index,edge_weighted)
-
-
-    edges = edge_index.detach().numpy()
-    num_node, _ = batch_data.x.size()
-    _, nums_edge = edges.shape
-    idx_not_missing =[n for n in range(num_node) if (n in edges[0]or n in edges[1])]
-
-    num_node_remained = len(idx_not_missing)
-    batch_data.x = batch_data.x[idx_not_missing]
-
-    batch_data.batch = batch_data.batch[idx_not_missing]
-    idx_dict = {idx_not_missing[n]:n for n in range(num_node_remained)}
-    edges = [[idx_dict[edges[0, n]], idx_dict[edges[1, n]]] for n in range(nums_edge) if not edges[0, n] == edges[1, n]]
-    if len(edges)>0:
-        batch_data.edge_index = torch.tensor(edges).transpose(0, 1)
+    batch_data.edge_index = drop_edge(batch_data.edge_index,edge_weighted)
     return batch_data
 
 
