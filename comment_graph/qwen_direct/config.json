@@ -1,0 +1,17 @@
+{
+  "comparison_dir": "comment_graph/outputs/grounded_structure_20261010",
+  "output_dir": "comment_graph/qwen_direct/outputs/validation_20261010_v2",
+  "graph_config": "comment_graph/config_fakeddit_structure_expanded_generateddepth.yaml",
+  "generator_config": "comment_generator/partial_observation/config/generator_structure_official_expanded.yaml",
+  "model_dir": "comment_generator/models/Qwen2.5-VL-3B-Instruct",
+  "adapter_dir": "comment_generator/partial_observation/outputs/qwen2_5_vl_3b_structure_comment_official_expanded_lora",
+  "seed": 42,
+  "max_real_comments": 16,
+  "max_input_tokens": 8192,
+  "max_new_tokens": 16,
+  "min_pixels": 200704,
+  "max_pixels": 401408,
+  "label_names": {"0": "True", "1": "Fake with true text", "2": "Fake with false text"},
+  "label_definition_reference": "sample_check/report.md",
+  "label_definition_paper": "https://aclanthology.org/2020.lrec-1.755/"
+}

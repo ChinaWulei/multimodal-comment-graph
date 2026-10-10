@@ -1,0 +1,91 @@
+# Formal Fakeddit graph experiment using the expanded 400-character
+# structure-SFT protocol.  Original and expanded artifacts stay isolated.
+seed: 42
+
+data:
+  dataset_name: fakeddit_structure
+  manifest_csv: ../comment_generator/partial_observation/data/official_subset/manifest.csv
+  real_trees_jsonl: ../comment_generator/partial_observation/data/official_subset/raw_comment_trees.jsonl
+  generated_comments:
+    train: ../comment_generator/partial_observation/data/official_subset/generated_train_structured_graphs_expanded_bestval_depthbounded.jsonl
+    validate: ../comment_generator/partial_observation/data/official_subset/generated_validate_structured_graphs_expanded_bestval_depthbounded.jsonl
+    test: ../comment_generator/partial_observation/data/official_subset/generated_test_structured_graphs_expanded_bestval_depthbounded.jsonl
+  label_column: 3_way_label
+  max_real_comments: 64
+  max_generated_comments: 5
+  max_news_length: 128
+  max_comment_length: 96
+  image_size: 224
+  strict_generated_coverage: true
+  restrict_to_generated_coverage: true
+
+classification:
+  num_classes: 3
+  label_mapping:
+    0: label_0
+    1: label_1
+    2: label_2
+
+comment_graph_mode: real_only
+decision_mode: concat
+
+# GAHR-inspired global decision plus comment-guided local residual.  This is
+# label-free with respect to generated comments: it uses each comment's
+# text-to-news/image evidence and a learned gate, not a news veracity label.
+local_correction:
+  dim: 128
+  temperature: 1.0
+  dropout: 0.1
+  gate_init: 0.1
+
+encoder:
+  text_model_name: bert-base-uncased
+  local_files_only: true
+  output_dim: 768
+  pretrained_image: true
+  fine_tune_text: false
+  fine_tune_image: false
+  node_encode_batch_size: 32
+  learning_rate: 0.00001
+
+graph:
+  hidden_dim: 256
+  num_layers: 2
+  node_type_count: 3
+  message_passing: legacy_gcn
+  num_edge_relations: 2
+  structure_mode: observed_tree
+  pooling_mode: mean
+  dynamic_top_k: 3
+  edge_score_dim: 128
+  attention_dropout: 0.1
+  quality_gate_dim: 128
+  attention_score_dim: 128
+  quality_attention_dropout: 0.1
+  quality_real_residual_init: 0.10
+  quality_generated_residual_init: 0.02
+  semantic_parent_gate: false
+  semantic_parent_gate_floor: 0.25
+
+training:
+  sampling: balanced
+  batch_size: 8
+  num_workers: 0
+  epochs: 20
+  patience: 5
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  use_amp: true
+  class_weighted_loss: false
+  checkpoint_dir: outputs/fakeddit_structure_expanded
+
+contextual_transform:
+  output_dim: 768
+  input_fc: false
+  num_layers: 2
+  num_heads: 12
+  dropout: 0.1
+  use_context: true
+  atn_ct_num_layers: 2
+  atn_ct_num_heads: 12
+  pooler: avg

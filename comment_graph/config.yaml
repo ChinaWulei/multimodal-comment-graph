@@ -1,0 +1,104 @@
+# Paths are resolved relative to this file.
+seed: 42
+
+data:
+  manifest_csv: ../comment_generator/checked/data/manifest.csv
+  real_comments_jsonl: ../comment_generator/checked/data/comment_pool.jsonl
+  generated_comments:
+    train: ../comment_generator/checked/outputs/generated_train.jsonl
+    validate: ../comment_generator/checked/outputs/generated_validate.jsonl
+    test: ../comment_generator/checked/outputs/generated_test.jsonl
+  max_real_comments: 20
+  max_generated_comments: 5
+  max_news_length: 128
+  max_comment_length: 96
+  image_size: 224
+  strict_generated_coverage: true
+
+# baseline | real_only | generated_only | real_generated
+comment_graph_mode: real_generated
+
+# Optional GAHR-inspired comment-to-token/region correction. CLI overrides this.
+decision_mode: concat
+local_correction:
+  dim: 128
+  temperature: 1.0
+  dropout: 0.1
+  gate_init: 0.1
+
+# Optional decision_mode=source_isolated; currently use pooling_mode=mean.
+isolated_fusion:
+  hidden_dim: 128
+  gate_init: 0.1
+  branch_dropout: 0.2
+  max_logit_delta: 2.0
+  detach_base_context: true
+  base_loss_weight: 0.5
+  amp_init_scale: 1024.0
+  # Optional reference subtraction, not a causal-identification claim.
+  correction_reference: none
+
+# Optional training-only regularization; requires source_isolated + generated comments.
+robustness:
+  mode: none
+  mismatch_weight: 0.5
+  audit_seed: 20261004
+
+encoder:
+  # The model is already present in the local Hugging Face cache.
+  text_model_name: bert-base-chinese
+  local_files_only: true
+  output_dim: 768
+  # Torchvision ImageNet weights are cached locally and used by every ablation.
+  pretrained_image: true
+  fine_tune_text: false
+  fine_tune_image: false
+  node_encode_batch_size: 32
+  learning_rate: 0.00001
+
+graph:
+  hidden_dim: 256
+  num_layers: 2
+  node_type_count: 3
+  # star | dynamic_cross_modal
+  structure_mode: dynamic_cross_modal
+  # mean | dual_modal_attention | quality_gated_attention
+  pooling_mode: dual_modal_attention
+  dynamic_top_k: 3
+  edge_score_dim: 128
+  attention_dropout: 0.1
+  quality_gate_dim: 128
+  attention_score_dim: 128
+  quality_attention_dropout: 0.1
+  quality_real_residual_init: 0.10
+  quality_generated_residual_init: 0.02
+
+training:
+  # balanced oversamples minority training news; paired with unweighted train CE.
+  sampling: shuffle
+  batch_size: 8
+  num_workers: 0
+  epochs: 20
+  patience: 5
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  use_amp: true
+  class_weighted_loss: true
+  checkpoint_dir: outputs
+
+smoke_test:
+  split: validate
+  max_samples: 8
+  report_path: reports/smoke_test.json
+
+# Required by the reused MFCL text/image feature module.
+contextual_transform:
+  output_dim: 768
+  input_fc: false
+  num_layers: 2
+  num_heads: 12
+  dropout: 0.1
+  use_context: true
+  atn_ct_num_layers: 2
+  atn_ct_num_heads: 12
+  pooler: avg

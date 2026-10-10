@@ -1,0 +1,105 @@
+seed: 42
+
+source:
+  project_root: ../../..
+  images_dir: ../../../images
+  comments_tsv: ../../../all_comments.tsv/all_comments.tsv
+  news_tsv:
+    train: ../../../multimodal_only_samples/multimodal_train.tsv
+    validate: ../../../multimodal_only_samples/multimodal_validate.tsv
+    test: ../../../multimodal_only_samples/multimodal_test_public.tsv
+
+data:
+  output_dir: ../data
+  raw_comment_trees_jsonl: raw_comment_trees.jsonl
+  thread_distillation_results_jsonl: thread_distillation_results.jsonl
+  structure_train_jsonl: structure_train.jsonl
+  structure_stats_json: structure_stats.json
+
+structure_aware:
+  # Preserve only trees that passed frozen multimodal relevance filtering.
+  min_relevance_score: 0.60
+  # Each context is a parent-first prefix. It is structural order only, never a timestamp.
+  max_context_nodes: 12
+  # Long raw Reddit comments are excluded, never truncated, to preserve exact SFT targets.
+  max_comment_characters: 240
+
+official_subset:
+  # Small, split-preserving subset for a first end-to-end graph experiment.
+  target_news:
+    train: 300
+    validate: 80
+    test: 80
+  min_top_level_comments: 1
+  min_reply_comments: 1
+  stratify_label: 3_way_label
+  # Macro-F1 requires every class to have enough held-out news.  This changes only
+  # subset sampling, never the original train/validate/test split or labels.
+  allocation_mode: balanced
+  max_download_attempts: 3
+  download_timeout_seconds: 20
+  per_domain_request_interval_seconds: 1.0
+
+model:
+  name_or_path: ../../models/Qwen2.5-VL-3B-Instruct
+  local_files_only: true
+  use_4bit: true
+  quant_type: nf4
+  double_quant: true
+  attn_implementation: sdpa
+  min_pixels: 200704
+  max_pixels: 401408
+  freeze_vision: true
+
+prompt:
+  template_path: ../prompts/structured_comment_generation.txt
+
+lora:
+  rank: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+
+training:
+  output_dir: ../outputs/qwen2_5_vl_3b_structure_comment_lora
+  epochs: 2
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 8
+  learning_rate: 0.0002
+  weight_decay: 0.01
+  warmup_ratio: 0.05
+  logging_steps: 5
+  save_steps: 50
+  eval_steps: 50
+  save_total_limit: 2
+  num_workers: 0
+  gradient_checkpointing: true
+  optimizer: paged_adamw_8bit
+  max_grad_norm: 1.0
+  # Reply-tree prefixes plus image tokens can exceed the flat-comment budget.
+  # 2048 preserves the complete JSON parent/content target rather than training on a truncation.
+  max_sequence_length: 2048
+
+smoke_training:
+  output_dir: ../outputs/qwen2_5_vl_3b_structure_comment_smoke_lora
+  max_steps: 10
+  validation_news: 5
+  max_validation_samples_per_news: 2
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 8
+  learning_rate: 0.0002
+  logging_steps: 1
+  eval_steps: 5
+  save_steps: 5
+  gradient_checkpointing: true
+  max_grad_norm: 1.0
+
+generation:
+  nodes_per_graph: 5
+  max_attempts_per_node: 3
+  max_generated_depth: 4
+  temperature: 0.85
+  top_p: 0.90
+  repetition_penalty: 1.08
+  max_new_tokens: 160

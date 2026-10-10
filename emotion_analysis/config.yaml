@@ -1,0 +1,35 @@
+seed: 42
+
+source:
+  usable_samples_csv: ../sample_check/usable_samples.csv
+  comments_tsv: ../all_comments.tsv/all_comments.tsv
+
+data:
+  directory: data
+  extracted_comments: comments_with_metadata.jsonl
+  extraction_stats: extraction_stats.json
+
+emotion_model:
+  name_or_path: SamLowe/roberta-base-go_emotions
+  cache_dir: null
+  local_files_only: false
+  device: auto
+  batch_size: 64
+  max_length: 128
+  threshold: 0.30
+
+output:
+  directory: outputs
+  comment_emotions: comment_emotions.jsonl
+  news_features: news_emotion_features.csv
+  label_summary: label_emotion_summary.csv
+  reply_edges: reply_emotion_edges.csv
+  transition_matrix: emotion_transition_matrix.csv
+  report: report.md
+
+aggregation:
+  label_column: 3_way_label
+  primary_scope: top_level
+  include_uniform_distribution: true
+  include_log_ups_distribution: true
+

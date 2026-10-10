@@ -1,0 +1,19 @@
+News:
+{news_text}
+
+Conversation thread:
+{thread_text}
+
+Task:
+First decide whether this conversation thread is meaningfully related to the news text or image. A reaction, joke, question, doubt, clarification, or contextual reply can be relevant even when it has low lexical overlap. Interpret short replies using their parent comments.
+
+If the thread is relevant, rewrite its main contribution as exactly one natural, standalone Reddit-style sentence of at most 40 English words. Write the sentence exactly as a user could post it under the news. Never describe the source conversation and never use meta-openings such as "this discussion", "the thread", "the comments", "discussing", or "users think". Preserve uncertainty or disagreement when present. Do not add facts, sources, personal experiences, identities, locations, or eyewitness claims that are not supported by the news and thread. Do not predict whether the news is real or fake.
+
+For a relevant thread, comment_type must be exactly one of: reaction, question, doubt, context, humor, discussion, other.
+
+Return one JSON object only:
+{{"relevant": true, "relevance_score": 0.0, "comment_type": "discussion", "distilled_comment": "..."}}
+
+For an unrelated, spam, or meaningless thread, return:
+For a rejected thread, comment_type must be exactly one of: off_topic, spam, meaningless.
+{{"relevant": false, "relevance_score": 0.0, "comment_type": "off_topic", "distilled_comment": ""}}

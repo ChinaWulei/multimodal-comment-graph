@@ -1,0 +1,10 @@
+News:
+{news_text}
+
+Existing user comments:
+{observed_comments}
+
+Task:
+Generate one plausible user comment that could naturally appear under this news post.
+
+The comment should be relevant to the news, image, and existing discussion. It may express a reaction, question, doubt, surprise, or useful context. Do not claim access to external evidence. Do not fabricate personal experiences, locations, identities, eyewitness claims, or verified sources that are not supported by the input. Do not explicitly predict whether the news is real or fake. Return only the comment body.

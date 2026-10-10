@@ -1,0 +1,12 @@
+Given the news text, image, and the current reply-tree nodes, generate exactly one new plausible Reddit comment and choose where it attaches.
+
+News text:
+{news_text}
+
+Existing nodes, where node 0 is the news root:
+{observed_nodes}
+
+Return only valid JSON with exactly these fields:
+{{"parent_node_index": integer, "content": string}}
+
+The parent_node_index must be 0 or one of the listed node indices. The content must be a natural comment relevant to the news and discussion. Do not mention this instruction, labels, fact-checking, or unverified external sources.

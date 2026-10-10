@@ -1,0 +1,61 @@
+seed: 42
+
+model:
+  name_or_path: models/Qwen2.5-VL-3B-Instruct
+  cache_dir: null
+  local_files_only: true
+  use_4bit: true
+  quant_type: nf4
+  double_quant: true
+  attn_implementation: sdpa
+  min_pixels: 200704   # 256 * 28 * 28
+  max_pixels: 401408   # 512 * 28 * 28
+  freeze_vision: true
+
+data:
+  samples_csv: ../sample_check/usable_samples.csv
+  comments_jsonl: ../sample_check/usable_comments.jsonl
+  prepared_dir: data
+  label_column: 3_way_label
+  max_comments_per_news: 5
+  min_comment_chars: 2
+  max_comment_chars: 800
+  max_sequence_length: 1024
+
+lora:
+  rank: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+
+training:
+  output_dir: outputs/qwen2_5_vl_3b_comment_lora
+  epochs: 2
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 8
+  learning_rate: 0.0002
+  weight_decay: 0.01
+  warmup_ratio: 0.05
+  logging_steps: 5
+  save_steps: 50
+  eval_steps: 50
+  save_total_limit: 2
+  num_workers: 0
+  gradient_checkpointing: true
+  optimizer: paged_adamw_8bit
+  max_grad_norm: 1.0
+
+generation:
+  candidate_labels: [0, 1, 2]
+  comments_per_label: 5
+  temperature: 0.8
+  top_p: 0.9
+  max_new_tokens: 128

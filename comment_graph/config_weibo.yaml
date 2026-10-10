@@ -1,0 +1,81 @@
+# Original CSV and images are read-only. Run audit_weibo.py first.
+seed: 42
+data:
+  dataset_name: weibo
+  audit_json: reports/weibo_source_audit_20261004.json
+  max_real_comments: 0
+  max_generated_comments: 0
+  max_news_length: 128
+  max_comment_length: 96
+  image_size: 224
+comment_graph_mode: baseline
+decision_mode: concat
+mm_fusion:
+  mode: mfcl
+  hidden_dim: 768
+  layers: 8
+mimoe:
+  # Adapted MIMoE core; h_mm stays 1536 (= text 768 + image 768), keeping
+  # the downstream MFCL classifier input width equal to the MFCL control.
+  semantic_dim: 64
+  hidden_dim: 768
+  num_experts: 2
+  dropout: 0.1
+  agreement_threshold: 0.3
+  semantic_threshold: 0.3
+  interaction_loss_weight: 0.7
+  balance_loss_weight: 0.1
+  router_z_loss_weight: 0.01
+  routing_beta: 0.7
+entity_evidence:
+  # Prepared by prepare_weibo_entity_evidence.py. The cache has no retrieved
+  # labels and candidates are limited to current valid training news rows.
+  mode: none
+  cache_dir: comment_graph/data/weibo_entity_evidence_valid_train_only
+  hidden_dim: 256
+  dropout: 0.1
+  gate_init: 0.1
+encoder:
+  text_model_name: bert-base-chinese
+  local_files_only: true
+  output_dim: 768
+  pretrained_image: true
+  fine_tune_text: false
+  fine_tune_image: false
+  node_encode_batch_size: 32
+  learning_rate: 0.00001
+graph:
+  hidden_dim: 256
+  num_layers: 2
+  node_type_count: 3
+  structure_mode: star
+  pooling_mode: mean
+  dynamic_top_k: 3
+  edge_score_dim: 128
+  attention_dropout: 0.1
+  quality_gate_dim: 128
+  attention_score_dim: 128
+  quality_attention_dropout: 0.1
+  quality_real_residual_init: 0.10
+  quality_generated_residual_init: 0.02
+training:
+  sampling: shuffle
+  batch_size: 16
+  num_workers: 0
+  epochs: 10
+  patience: 3
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  use_amp: true
+  class_weighted_loss: true
+  checkpoint_dir: outputs/weibo
+contextual_transform:
+  output_dim: 768
+  input_fc: false
+  num_layers: 2
+  num_heads: 12
+  dropout: 0.1
+  use_context: true
+  atn_ct_num_layers: 2
+  atn_ct_num_heads: 12
+  pooler: avg

@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>生成评论质量与连接位置审阅</title>
+<style>
+  :root { color-scheme: light; font-family: "Microsoft YaHei", "Noto Sans SC", Arial, sans-serif; color: #182232; background: #eef2f7; }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  header { background: #132a45; color: white; padding: 18px 24px; }
+  header h1 { font-size: 20px; margin: 0 0 8px; }
+  header p { margin: 0; font-size: 13px; opacity: .86; }
+  main { max-width: 1320px; margin: 18px auto; padding: 0 18px 28px; }
+  .toolbar, .card { background: white; border: 1px solid #dbe2eb; border-radius: 12px; box-shadow: 0 2px 9px #263e5b0a; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 16px; margin-bottom: 16px; }
+  .toolbar .spacer { flex: 1; }
+  button, .upload { border: 1px solid #8797a9; border-radius: 7px; background: white; color: #172b43; padding: 9px 13px; font: inherit; cursor: pointer; }
+  button:hover, .upload:hover { background: #eef5ff; }
+  button.primary { color: white; background: #1762bd; border-color: #1762bd; }
+  button.primary:hover { background: #104d98; }
+  .upload input { display: none; }
+  #notice { font-size: 13px; color: #755117; }
+  .layout { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(380px, 1fr); gap: 16px; }
+  .card { padding: 18px; }
+  .card h2 { font-size: 15px; color: #41556e; margin: 0 0 8px; }
+  .headline { font-size: 21px; font-weight: 700; line-height: 1.45; margin: 0 0 14px; }
+  .photo { width: 100%; max-height: 480px; object-fit: contain; background: #f5f7fa; border-radius: 7px; }
+  .small { color: #65758a; font-size: 12px; overflow-wrap: anywhere; }
+  .text-box { background: #f5f8fc; border-left: 4px solid #a9bfdc; border-radius: 4px; padding: 12px 14px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .generated { border-color: #1762bd; background: #edf5ff; font-size: 18px; }
+  .ancestor { margin: 10px 0; font-size: 13px; }
+  fieldset { border: 1px solid #d5dfe9; border-radius: 8px; margin: 16px 0; padding: 11px 13px; }
+  legend { font-weight: 700; padding: 0 5px; }
+  .choices { display: flex; flex-wrap: wrap; gap: 7px; }
+  .choices label { border: 1px solid #b9c8d9; padding: 7px 9px; border-radius: 6px; cursor: pointer; }
+  .choices label:has(input:checked) { background: #dcecff; border-color: #1762bd; }
+  .choices input { margin-right: 5px; }
+  textarea { width: 100%; min-height: 62px; padding: 9px; border: 1px solid #b9c8d9; border-radius: 6px; font: inherit; }
+  .footer { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-top: 12px; }
+  .hint { font-size: 12px; color: #5d6d80; line-height: 1.5; }
+  @media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>生成评论质量与连接位置审阅</h1>
+  <p>仅官方训练集 · 不显示真假标签 · 不联网 · 不自动给出质量判断</p>
+</header>
+<main>
+  <div class="toolbar">
+    <strong id="progress">载入中…</strong>
+    <button id="previous" type="button">上一条</button>
+    <button id="next" type="button">下一条</button>
+    <span class="spacer"></span>
+    <label class="upload">导入之前导出的 JSONL<input id="import-file" type="file" accept=".jsonl,.txt"></label>
+    <button id="export" type="button">导出标注 JSONL</button>
+  </div>
+  <p id="notice" role="status"></p>
+  <div class="layout">
+    <section class="card">
+      <h2>新闻图文</h2>
+      <p id="headline" class="headline"></p>
+      <img id="photo" class="photo" alt="当前新闻图片">
+      <p id="image-path" class="small"></p>
+    </section>
+    <section class="card">
+      <h2>模型拟连接的父节点</h2>
+      <div id="parent" class="text-box"></div>
+      <div id="ancestors" class="ancestor"></div>
+      <h2>生成评论</h2>
+      <div id="generated" class="text-box generated"></div>
+      <fieldset><legend>① 评论内容与新闻/讨论是否相关？</legend>
+        <div class="choices">
+          <label><input type="radio" name="relevance" value="relevant">相关</label>
+          <label><input type="radio" name="relevance" value="partly_relevant">部分相关</label>
+          <label><input type="radio" name="relevance" value="off_topic">偏题</label>
+          <label><input type="radio" name="relevance" value="unknown">无法判断</label>
+        </div>
+      </fieldset>
+      <fieldset><legend>② 直接回复这个父节点是否合适？</legend>
+        <div class="choices">
+          <label><input type="radio" name="parent_fit" value="good">合适</label>
+          <label><input type="radio" name="parent_fit" value="uncertain">不确定</label>
+          <label><input type="radio" name="parent_fit" value="wrong">明显不合适</label>
+          <label><input type="radio" name="parent_fit" value="unknown">无法判断</label>
+        </div>
+      </fieldset>
+      <fieldset><legend>③ 是否出现无依据的具体事实、身份或来源断言？</legend>
+        <div class="choices">
+          <label><input type="radio" name="claim" value="yes">有</label>
+          <label><input type="radio" name="claim" value="no">未见</label>
+          <label><input type="radio" name="claim" value="unknown">无法判断</label>
+        </div>
+      </fieldset>
+      <label for="notes"><strong>备注（可选）</strong></label>
+      <textarea id="notes" placeholder="例如：评论谈到了图片里没有出现的人物"></textarea>
+      <div class="footer">
+        <span class="hint">点选后自动暂存于此浏览器；请定期导出 JSONL 备份。<br>“未见无依据断言”不等于已经事实核查为真。</span>
+        <button id="save-next" class="primary" type="button">保存并看下一条</button>
+      </div>
+    </section>
+  </div>
+</main>
+<script id="queue-data" type="text/plain">__QUEUE_B64__</script>
+<script id="photo-data" type="text/plain">__PHOTOS_B64__</script>
+<script>
+(() => {
+  "use strict";
+  const queueHash = "__QUEUE_HASH__";
+  const decode = id => JSON.parse(new TextDecoder().decode(
+    Uint8Array.from(atob(document.getElementById(id).textContent.trim()), c => c.charCodeAt(0))));
+  const reference = decode("queue-data");
+  const photos = decode("photo-data");
+  const immutable = ["news_id", "official_split", "source_group", "generated_position",
+    "image_path", "headline", "parent_node_index", "parent_node_type", "parent_content",
+    "recent_ancestors", "generated_comment"];
+  const storageKey = "mfcl-generated-quality-" + queueHash;
+  let rows = reference.map(row => ({...row}));
+  let index = 0;
+  let storageAvailable = true;
+  const $ = id => document.getElementById(id);
+  const selected = name => document.querySelector(`input[name="${name}"]:checked`)?.value;
+  const valid = (candidate) => {
+    if (!Array.isArray(candidate) || candidate.length !== reference.length) return false;
+    const byId = new Map(candidate.map(row => [String(row.annotation_id), row]));
+    if (byId.size !== reference.length) return false;
+    const relevance = new Set(["relevant", "partly_relevant", "off_topic", null]);
+    const parent = new Set(["good", "uncertain", "wrong", null]);
+    for (const base of reference) {
+      const row = byId.get(String(base.annotation_id));
+      if (!row || !immutable.every(field => JSON.stringify(row[field]) === JSON.stringify(base[field]))) return false;
+      if (!relevance.has(row.content_relevance) || !parent.has(row.parent_fit)) return false;
+      if (![true, false, null].includes(row.unsupported_specific_claim)) return false;
+      if (typeof (row.review_notes ?? "") !== "string") return false;
+    }
+    return true;
+  };
+  const notice = message => { $("notice").textContent = message; };
+  const store = () => {
+    if (!storageAvailable) return;
+    try { localStorage.setItem(storageKey, JSON.stringify(rows)); }
+    catch (_) { storageAvailable = false; notice("浏览器无法自动暂存；请使用右上角“导出标注 JSONL”保存进度。"); }
+  };
+  const progress = () => {
+    const done = rows.filter(row => row.annotation_status === "reviewed").length;
+    $("progress").textContent = `${index + 1} / ${rows.length} · 已完成 ${done} 条`;
+  };
+  const setRadio = (name, value, showUnknown) => {
+    for (const input of document.querySelectorAll(`input[name="${name}"]`)) {
+      input.checked = input.value === (value === null && showUnknown ? "unknown" : value);
+    }
+  };
+  const render = () => {
+    const row = rows[index];
+    $("headline").textContent = row.headline;
+    $("photo").src = photos[row.annotation_id];
+    $("image-path").textContent = row.image_path;
+    $("parent").textContent = `${row.parent_node_type} · 节点 ${row.parent_node_index}\n${row.parent_content}`;
+    $("generated").textContent = row.generated_comment;
+    $("ancestors").textContent = (row.recent_ancestors || []).slice(1)
+      .map(node => `上层讨论 (${node.node_type}): ${node.content}`).join("\n");
+    const seen = row.annotation_status === "reviewed" || row.annotation_status === "unresolved";
+    setRadio("relevance", row.content_relevance, seen);
+    setRadio("parent_fit", row.parent_fit, seen);
+    setRadio("claim", row.unsupported_specific_claim === true ? "yes" :
+      row.unsupported_specific_claim === false ? "no" : null, seen);
+    $("notes").value = row.review_notes || "";
+    progress();
+  };
+  const capture = () => {
+    const row = rows[index];
+    const rel = selected("relevance"), par = selected("parent_fit"), claim = selected("claim");
+    if (rel !== undefined) row.content_relevance = rel === "unknown" ? null : rel;
+    if (par !== undefined) row.parent_fit = par === "unknown" ? null : par;
+    if (claim !== undefined) row.unsupported_specific_claim = claim === "unknown" ? null : claim === "yes";
+    row.review_notes = $("notes").value.trim();
+    if (rel !== undefined || par !== undefined || claim !== undefined || row.review_notes) {
+      const allThreeConsidered = rel !== undefined && par !== undefined && claim !== undefined;
+      row.annotation_status = allThreeConsidered && row.content_relevance !== null &&
+        row.parent_fit !== null ? "reviewed" : "unresolved";
+    }
+    store(); progress();
+  };
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+    if (saved && valid(saved)) {
+      const byId = new Map(saved.map(row => [String(row.annotation_id), row]));
+      rows = reference.map(base => byId.get(String(base.annotation_id)));
+      const firstPending = rows.findIndex(row => row.annotation_status !== "reviewed");
+      index = firstPending < 0 ? 0 : firstPending;
+      notice("已恢复这个浏览器里的上次进度。请仍定期导出 JSONL 备份。");
+    }
+  } catch (_) { storageAvailable = false; notice("浏览器无法自动暂存；请定期导出 JSONL。"); }
+  for (const input of document.querySelectorAll("input[type=radio]")) input.addEventListener("change", capture);
+  $("notes").addEventListener("blur", capture);
+  $("previous").addEventListener("click", () => { capture(); index = Math.max(0, index - 1); render(); });
+  $("next").addEventListener("click", () => { capture(); index = Math.min(rows.length - 1, index + 1); render(); });
+  $("save-next").addEventListener("click", () => {
+    if (["relevance", "parent_fit", "claim"].some(name => selected(name) === undefined)) {
+      notice("请对三个问题各选择一项；不能判断时请选择“无法判断”。"); return;
+    }
+    capture(); notice("已暂存当前条目。记得定期导出 JSONL。");
+    if (index < rows.length - 1) { index += 1; render(); }
+  });
+  $("export").addEventListener("click", () => {
+    capture();
+    const data = rows.map(row => JSON.stringify(row)).join("\n") + "\n";
+    const url = URL.createObjectURL(new Blob([data], {type: "application/x-ndjson;charset=utf-8"}));
+    const link = document.createElement("a"); link.href = url;
+    link.download = "generated_quality_annotation_train60_filled.jsonl";
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    notice("标注文件已导出。请将它放到 comment_graph/reports/ 后运行校验命令。");
+  });
+  $("import-file").addEventListener("change", async event => {
+    const file = event.target.files?.[0]; if (!file) return;
+    try {
+      const candidate = (await file.text()).split(/\r?\n/).filter(Boolean).map(JSON.parse);
+      if (!valid(candidate)) throw new Error("ID、原文或标签格式与本页队列不一致");
+      const byId = new Map(candidate.map(row => [String(row.annotation_id), row]));
+      rows = reference.map(base => byId.get(String(base.annotation_id)));
+      const firstPending = rows.findIndex(row => row.annotation_status !== "reviewed");
+      index = firstPending < 0 ? 0 : firstPending; store(); render();
+      notice(`成功导入 ${file.name}；可继续标注。`);
+    } catch (error) { notice(`导入失败：${error.message}`); }
+    event.target.value = "";
+  });
+  render();
+})();
+</script>
+</body>
+</html>

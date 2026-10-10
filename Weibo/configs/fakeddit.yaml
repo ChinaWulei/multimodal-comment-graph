@@ -1,0 +1,52 @@
+# Paths are resolved relative to the repository root.
+data:
+    train_tsv: data/fakeddit/all_train.tsv
+    val_tsv: data/fakeddit/all_validate.tsv
+    test_tsv: data/fakeddit/all_test_public.tsv
+    comments_tsv: data/fakeddit/comments.tsv
+    images_dir: data/fakeddit/images
+    id_column: id
+    text_column: clean_title
+    label_column: 2_way_label
+    image_path_column: null
+    max_text_length: 64
+    max_comment_length: 64
+    # Start small: each comment is encoded by RoBERTa online.
+    max_comments: 8
+    min_comments: 1
+    undirected_graph: true
+    # Enable this only if the downloaded archive stores images in subfolders.
+    recursive_image_lookup: false
+    # Set to a small integer such as 1000 for a quick end-to-end smoke run.
+    max_samples: null
+
+encoder:
+    text_model_name: roberta-base
+    image_size: 224
+    pretrained_image: true
+    fine_tune_text: true
+    fine_tune_image: true
+    node_encode_batch_size: 32
+    learning_rate: 0.00001
+
+pretrain_epochs: 5
+max_epoch: 30
+patience: 5
+batch_size: 4
+num_workers: 0
+learning_rate: 0.0001
+weight_decay: 0.0001
+multimodal_loss_weight: 1.0
+use_amp: true
+checkpoint_path: checkpoints/fakeddit_mfcl.pt
+
+contextual_transform:
+    output_dim: 768
+    input_fc: false
+    num_layers: 2
+    num_heads: 12
+    dropout: 0.1
+    use_context: true
+    atn_ct_num_layers: 2
+    atn_ct_num_heads: 12
+    pooler: avg

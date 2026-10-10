@@ -1,0 +1,11 @@
+# Install a PyTorch/PyG build matching your CUDA version first.
+torch==1.13.1
+torchvision==0.14.1
+torch-geometric==2.3.1
+transformers==4.36.2
+pandas==1.5.2
+Pillow>=9.0,<11
+PyYAML>=6.0
+munch>=2.5
+scikit-learn==1.0.2
+networkx>=2.8,<4

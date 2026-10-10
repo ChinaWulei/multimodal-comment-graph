@@ -1,0 +1,103 @@
+seed: 42
+
+source:
+  dataset_dir: ../../../checked_data/official_repo/dataset
+  image_status_db: ../../../checked_data/download_status.sqlite3
+
+data:
+  output_dir: ../data
+  manifest_csv: manifest.csv
+  comment_pool_jsonl: comment_pool.jsonl
+  comment_pool_source: checked_heuristic_pool_jsonl
+  news_contexts_jsonl: news_contexts.jsonl
+  gold_targets_jsonl: gold_targets.jsonl
+  train_jsonl: train.jsonl
+  val_jsonl: val.jsonl
+  test_jsonl: test.jsonl
+  stats_json: stats.json
+
+split:
+  train_ratio: 0.80
+  validate_ratio: 0.10
+  test_ratio: 0.10
+
+preprocessing:
+  min_comment_chars: 4
+  max_comment_chars: 200
+  max_news_chars: 800
+  max_candidate_comments_per_news: 20
+  min_total_comments: 2
+  observed_ratio: 0.30
+  max_observed_comments: 3
+  max_target_comments_per_news: 5
+
+prompt:
+  template_path: ../prompts/comment_generation_zh.txt
+  system_prompt_path: ../prompts/system_zh.txt
+
+model:
+  name_or_path: ../../models/Qwen2.5-VL-3B-Instruct
+  local_files_only: true
+  use_4bit: true
+  quant_type: nf4
+  double_quant: true
+  attn_implementation: sdpa
+  min_pixels: 200704
+  max_pixels: 401408
+  freeze_vision: true
+
+lora:
+  rank: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+
+training:
+  output_dir: ../outputs/qwen2_5_vl_3b_checked_comment_lora
+  epochs: 2
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 8
+  learning_rate: 0.0002
+  weight_decay: 0.01
+  warmup_ratio: 0.05
+  logging_steps: 20
+  save_steps: 250
+  eval_steps: 250
+  save_total_limit: 2
+  num_workers: 0
+  gradient_checkpointing: true
+  optimizer: paged_adamw_8bit
+  max_grad_norm: 1.0
+  max_sequence_length: 2048
+
+smoke_training:
+  output_dir: ../outputs/qwen2_5_vl_3b_checked_comment_smoke_lora_v3
+  max_steps: 10
+  validation_news: 5
+  max_validation_samples_per_news: 2
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 8
+  learning_rate: 0.0002
+  logging_steps: 1
+  eval_steps: 5
+  save_steps: 5
+  gradient_checkpointing: true
+  max_grad_norm: 1.0
+
+generation:
+  comments_per_news: 5
+  temperature: 0.85
+  top_p: 0.90
+  repetition_penalty: 1.08
+  max_new_tokens: 96
+
+evaluation:
+  hallucination_phrases:
+    - 我就在现场
+    - 我亲眼看到
+    - 我朋友在那工作
+    - 据官方证实
+
+detector:
+  label_column: binary_label

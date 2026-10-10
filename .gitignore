@@ -1,0 +1,102 @@
+# Dataset assets: share separately, preserving paths and source permissions.
+/all_comments.tsv/
+/multimodal_only_samples/
+/image/
+/images/
+/checked_data/official_repo/
+/checked_data/images/
+/checked_data/image_manifest.csv
+/checked_data/dataset_audit.json
+/checked_data/download_summary.json
+
+# Generated sample checks (keep build_sample_check.py under version control).
+/sample_check/all_image_matches.csv
+/sample_check/usable_samples.csv
+/sample_check/usable_comments.jsonl
+/sample_check/report.md
+
+# Local experiment data, weights, caches and generated reports, at any depth.
+# Do not ignore *.json, *.jsonl, *.yaml or *.txt globally: configs/prompts
+# and deliberately reviewed small fixtures must remain trackable.
+data/
+outputs/
+checkpoints/
+cache/
+.cache/
+logs/
+reports/
+runs/
+wandb/
+/comment_generator/models/
+
+# Downloaded third-party checkout has its own Git history and license.
+# Keep it out of this repository until dependencies are packaged deliberately.
+/third_party/MIMoE-FND/
+
+# Weights, tensor/feature caches, databases and downloaded archives.
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.onnx
+*.npy
+*.npz
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+*.sqlite
+*.sqlite3
+*.sqlite*
+*.db
+*.db-wal
+*.db-shm
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.part
+*.partial
+*.incomplete
+*.log
+
+# Credentials: templates must contain placeholders, never real secrets.
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+/credentials.json
+/secrets.json
+
+# Python, local environments, IDE and operating-system artifacts.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+*.egg-info/
+build/
+dist/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+__MACOSX/
+/tmp/
+/temp/
+*.tmp
+*.bak
+*.swp
